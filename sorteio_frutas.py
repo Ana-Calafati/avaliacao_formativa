@@ -5,7 +5,7 @@ from ttkbootstrap.constants import *
 from tkinter import messagebox
 
 NOME_DB = 'sorteio.db' 
-FRUTAS = [' 🍎 ', ' 🍌 ', ' 🍒 ', ' 🍇 ', ' 🍓 ']
+FRUTAS = [' 🍎 ', ' 🍌 ', ' 🍒 ', ' 🍇 ', ' 🍓 '] 
 
 def conectar_db():
     """Cria a conexão com o banco de dados SQLite."""
@@ -26,7 +26,7 @@ def criar_tabela():
     conn.commit()
     conn.close()
 
-# Executa a criação da tabela ao iniciar o programa (Estrutura do BD)
+# Executa a criação da tabela ao iniciar o programa
 criar_tabela() 
 
 def inserir_jogada(resultado_string):
@@ -34,10 +34,9 @@ def inserir_jogada(resultado_string):
     conn = conectar_db()
     cursor = conn.cursor()
     
-    # Requisito: O clique do botão executa corretamente o INSERT
+    # Executa o INSERT
     cursor.execute("INSERT INTO jogadas (resultado) VALUES (?)", (resultado_string,))
-    
-    # Requisito: Uso correto de conn.commit()
+
     conn.commit()
     conn.close()
 
@@ -46,7 +45,7 @@ def selecionar_jogadas():
     conn = conectar_db()
     cursor = conn.cursor()
     
-    # Requisito: Consultar todos os dados da tabela jogadas (SELECT id, resultado FROM jogadas ORDER BY id DESC)
+    # Consulta todos os dados, ordenando pelos mais recentes
     cursor.execute("SELECT id, resultado FROM jogadas ORDER BY id DESC")
     dados = cursor.fetchall()
     conn.close()
@@ -55,33 +54,28 @@ def selecionar_jogadas():
 def sortear_frutas():
     """Sorteia 3 frutas e formata a string de auditoria."""
     
-    # Requisito: Usar random.choice para sortear 3 frutas
+    # Usa random.choice para sortear 3 frutas
     f1 = random.choice(FRUTAS)
     f2 = random.choice(FRUTAS)
     f3 = random.choice(FRUTAS)
     
-    # Requisito: Lógica de Vitória (if f1 == f2 == f3)
+    # Lógica de Vitória (f1 == f2 == f3)
     venceu = (f1 == f2 == f3)
     jogada_str = f"{f1} - {f2} - {f3}"
     
-    # Requisito: Formatar a string única para auditoria
     if venceu:
-        # Formato de string para Vencedor
         resultado_auditoria = f" 🏆 VITÓRIA: {jogada_str} 🏆 " 
     else:
-        # Formato de string para Perdedor
         resultado_auditoria = f"Jogada: {jogada_str}"
 
     return f1, f2, f3, resultado_auditoria, venceu
 
+
 def popular_treeview():
     """Limpa o Treeview e o preenche com os dados do banco (SELECT)."""
-    
-    # Requisito: Limpar o Treeview
     for item in tree.get_children():
         tree.delete(item)
 
-    # Requisito: Populando o Treeview com dados do SELECT
     dados = selecionar_jogadas()
     for id_jogada, resultado_str in dados:
         tree.insert('', END, values=(id_jogada, resultado_str))
@@ -89,21 +83,60 @@ def popular_treeview():
 
 def executar_sorteio():
     """Função principal ativada pelo botão 'Sortear!'."""
-    
-    # 1. Lógica: Sortear e verificar
     f1, f2, f3, resultado_auditoria, venceu = sortear_frutas()
     
-    # 2. Frontend: Atualizar as Labels de frutas
     fruta_var1.set(f1)
     fruta_var2.set(f2)
     fruta_var3.set(f3)
 
-    # 3. Backend: INSERT da string de auditoria
     inserir_jogada(resultado_auditoria)
-    
-    # 4. Frontend: Feedback de vitória com messagebox (apenas se venceu)
     if venceu:
         messagebox.showinfo("🎉 Parabéns!", "TRÊS IGUAIS! Você teve uma VITÓRIA!")
-        
-    # 5. Frontend: Atualizar o histórico após o INSERT (RF-03)
-    popular_treeview
+    popular_treeview()
+
+
+# criando a tela
+janela_principal = ttk.Window(themename="darkly")
+janela_principal.title("🎰 Sorteio de Frutas")
+janela_principal.geometry("650x700")
+ttk.Label(janela_principal, text="Sorteio de Frutas", font=('Helvetica', 24, 'bold'), bootstyle="primary").pack(pady=(20, 10))
+
+frutas_frame = ttk.Frame(janela_principal)
+frutas_frame.pack(pady=40)
+
+fruta_var1 = ttk.StringVar(value="❓")
+fruta_var2 = ttk.StringVar(value="❓")
+fruta_var3 = ttk.StringVar(value="❓")
+
+fonte_frutas = ('Helvetica', 70, 'bold')
+
+# label para exibir as frutas
+ttk.Label(frutas_frame, textvariable=fruta_var1, font=fonte_frutas, bootstyle="info").pack(side=LEFT, padx=20)
+ttk.Label(frutas_frame, textvariable=fruta_var2, font=fonte_frutas, bootstyle="info").pack(side=LEFT, padx=20)
+ttk.Label(frutas_frame, textvariable=fruta_var3, font=fonte_frutas, bootstyle="info").pack(side=LEFT, padx=20)
+
+#fazendo os botões
+
+# botão para sortear
+botao_sortear = ttk.Button(janela_principal, text="Sortear!", bootstyle="success", command=executar_sorteio)
+botao_sortear.pack(pady=30, ipadx=40, ipady=10)
+
+ttk.Label(janela_principal, text="Histórico de Jogadas", font=('Helvetica', 16)).pack(pady=10)
+
+# ttk.Treeview para exibir o histórico de jogadas
+colunas = ("ID", "Resultado da Jogada")
+tree = ttk.Treeview(janela_principal, columns=colunas, show='headings', bootstyle="dark") 
+tree.pack(fill=BOTH, expand=True, padx=20, pady=10)
+
+# Configuração das Colunas
+tree.heading("ID", text="ID", anchor=CENTER)
+tree.heading("Resultado da Jogada", text="Resultado da Jogada", anchor=W)
+tree.column("ID", width=50, anchor=CENTER, stretch=NO)
+tree.column("Resultado da Jogada", width=500, anchor=W)
+
+
+# fazendo código rodar
+if __name__ == '__main__':
+    # Popula o Treeview com dados existentes ao abrir a tela
+    popular_treeview() 
+    janela_principal.mainloop()
